@@ -1,0 +1,6 @@
+{
+ "agri-demo-nord": {"name": "AgriDemo Nord", "logo": "loghi/agri-demo-nord.svg", "lang": "it"},
+ "verde-demo-sud": {"name": "VerdeDemo Sud", "logo": "loghi/verde-demo-sud.svg", "lang": "it"},
+ "campo-demo-est": {"name": "CampoDemo Est", "logo": "loghi/campo-demo-est.svg", "lang": "it"},
+ "xfarm": {"name": "xFarm", "logo": "", "lang": "it", "generico": true}
+}

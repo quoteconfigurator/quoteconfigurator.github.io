@@ -1,0 +1,9 @@
+# GitHub Pages: pubblica solo il sito, non i file di lavoro.
+exclude:
+  - README.md
+  - LEGGIMI.md
+  - dealers.json
+  - site.json
+  - tools
+  - loghi
+  - .gitignore

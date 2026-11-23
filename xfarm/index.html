@@ -1,0 +1,69 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>xFarm — Configuratore preventivi</title>
+<style>body{margin:0;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f4f5f2;color:#333;display:flex;min-height:100vh;align-items:center;justify-content:center}form{background:#fff;padding:28px 32px;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.08);width:100%;max-width:360px;box-sizing:border-box;margin:16px}h1{font-size:18px;margin:0 0 6px}p{margin:0 0 16px;color:#555;font-size:14px}input{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px}button{width:100%;font:inherit;font-weight:600;padding:10px;border:0;border-radius:8px;background:#2e7d32;color:#fff;cursor:pointer}button:disabled{opacity:.6;cursor:wait}#m{color:#c62828;margin:12px 0 0;min-height:1em}</style>
+<script data-goatcounter="https://NOME-GOATCOUNTER.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script id="qx-cfg" type="application/json">{"slug": "xfarm", "build": "0f43f685c2de", "iterations": 600000, "salt": "RVSJx6lkMf7XS5Q478tPIQ==", "iv": "sjQiH+e8Oy2APdKE", "key": "znqojHdXQCqnLxDWaOiyV63M4lo/ngUy9k0v7cNPTmoDoBaI3F7KwLU/dT7/IDFY"}</script>
+</head><body>
+<form id="f" autocomplete="on"><h1>xFarm Technologies</h1><p>Configuratore preventivi. Inserisci la password che ti ha dato xFarm.</p>
+<input type="text" name="username" value="xfarm" autocomplete="username" hidden>
+<input id="p" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required autofocus>
+<button id="b" type="submit">Apri il configuratore</button><p id="m" role="alert"></p></form>
+<script>
+(function () {
+  'use strict';
+  var C = JSON.parse(document.getElementById('qx-cfg').textContent);
+  var SK = 'qxKey:' + C.slug;
+  var f = document.getElementById('f'), inp = document.getElementById('p'),
+      btn = document.getElementById('b'), msg = document.getElementById('m');
+  function un64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function to64(u) { var s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+  function store(k, v) { try { if (v) sessionStorage.setItem(k, v); else sessionStorage.removeItem(k); } catch (e) {} }
+  function stored(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function busy(on, text) { btn.disabled = on; inp.disabled = on; msg.textContent = text || ''; msg.style.color = on ? '#555' : ''; }
+
+  async function unwrap(password) {
+    var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    var kek = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: un64(C.salt), iterations: C.iterations },
+      base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(C.iv) }, kek, un64(C.key)));
+  }
+
+  async function openApp(raw) {
+    var key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    var r = await fetch('../app/app.enc?v=' + C.build, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('download');
+    var buf = new Uint8Array(await r.arrayBuffer()), pt;
+    try { pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12)); }
+    catch (e) { throw new Error('stale'); }
+    var page = new TextDecoder().decode(pt);
+    var head = '<base href="../app/"><script>window.QX_DEALER_SLUG=' + JSON.stringify(C.slug) + ';<\/script>';
+    page = /<head[^>]*>/i.test(page) ? page.replace(/<head[^>]*>/i, function (m) { return m + head; }) : head + page;
+    document.open(); document.write(page); document.close();
+  }
+
+  function fail(e) {
+    busy(false, e && e.message === 'stale'
+      ? 'Il configuratore è stato aggiornato: ricarica la pagina.'
+      : 'Impossibile aprire il configuratore. Controlla la connessione e riprova.');
+  }
+
+  f.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    busy(true, 'Verifica in corso…');
+    var raw;
+    try { raw = await unwrap(inp.value); }
+    catch (e) { busy(false, 'Password non corretta.'); inp.select(); return; }
+    store(SK, to64(raw));
+    try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: '/' + C.slug + '/aperto', title: C.slug + ' aperto', event: true }); } catch (e) {}
+    busy(true, 'Apertura del configuratore…');
+    try { await openApp(raw); } catch (e) { store(SK, null); fail(e); }
+  });
+
+  if (!window.crypto || !crypto.subtle) { busy(true, 'Questo browser non è supportato: usa una versione recente di Chrome, Edge, Safari o Firefox.'); return; }
+  var saved = stored(SK);
+  if (saved) {
+    busy(true, 'Apertura del configuratore…');
+    openApp(un64(saved)).catch(function () { store(SK, null); busy(false); inp.focus(); });
+  }
+})();
+</script>
+</body></html>
